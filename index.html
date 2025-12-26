@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Good Bye 2025</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Jua&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <h1 class="loading-title">Good Bye 2025</h1>
+            <p class="loading-subtitle">잠시만 기다려주세요...</p>
+            <div class="loading-bar-container">
+                <div class="loading-bar"></div>
+            </div>
+            <p class="loading-percent">0%</p>
+        </div>
+    </div>
+
+    <!-- Main Canvas -->
+    <canvas id="main-canvas"></canvas>
+
+    <!-- Rolling Paper Popup -->
+    <div id="rolling-paper-popup" class="popup hidden">
+        <div class="popup-overlay"></div>
+        <div class="popup-content popup-menu">
+            <h2>롤링페이퍼</h2>
+            <button id="write-paper-btn" class="popup-btn">롤링페이퍼 쓰기</button>
+            <button id="view-paper-btn" class="popup-btn">롤링페이퍼 보기</button>
+            <button class="close-btn">닫기</button>
+        </div>
+    </div>
+
+    <!-- Write Paper Popup -->
+    <div id="write-paper-popup" class="popup hidden">
+        <div class="popup-overlay"></div>
+        <div class="popup-content write-paper-content">
+            <h2>롤링페이퍼 쓰기</h2>
+            <div class="sticky-note" id="new-sticky-note">
+                <input type="text" id="author-input" placeholder="이름 (선택)" maxlength="10">
+                <textarea id="message-input" placeholder="메시지를 입력하세요..." maxlength="200"></textarea>
+                <div class="color-picker">
+                    <span class="color-option" data-color="#FFE4B5" style="background: #FFE4B5"></span>
+                    <span class="color-option" data-color="#FFB6C1" style="background: #FFB6C1"></span>
+                    <span class="color-option" data-color="#98FB98" style="background: #98FB98"></span>
+                    <span class="color-option" data-color="#87CEEB" style="background: #87CEEB"></span>
+                    <span class="color-option" data-color="#DDA0DD" style="background: #DDA0DD"></span>
+                </div>
+            </div>
+            <button id="submit-paper-btn" class="popup-btn">저장하기</button>
+            <button class="close-btn">닫기</button>
+        </div>
+    </div>
+
+    <!-- View Papers Popup -->
+    <div id="view-papers-popup" class="popup hidden">
+        <div class="popup-overlay"></div>
+        <div class="popup-content view-papers-content">
+            <h2>롤링페이퍼 보기</h2>
+            <div class="papers-container" id="papers-container">
+                <!-- Papers will be dynamically loaded -->
+            </div>
+            <button class="close-btn">닫기</button>
+        </div>
+    </div>
+
+    <!-- Awards Popup -->
+    <div id="awards-popup" class="popup hidden">
+        <div class="popup-overlay"></div>
+        <div class="popup-content awards-content">
+            <h2>2025 상장</h2>
+            <div class="awards-grid" id="awards-grid">
+                <!-- Awards will be dynamically loaded -->
+            </div>
+            <button class="close-btn">닫기</button>
+        </div>
+    </div>
+
+    <!-- Award Detail Popup -->
+    <div id="award-detail-popup" class="popup hidden">
+        <div class="popup-overlay"></div>
+        <div class="popup-content award-detail-content">
+            <img id="award-detail-img" src="" alt="상장">
+            <button class="close-btn">닫기</button>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/background.js"></script>
+    <script src="js/characters.js"></script>
+    <script src="js/rollingPaper.js"></script>
+    <script src="js/awards.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
