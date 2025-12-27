@@ -1,24 +1,5 @@
 // Utility functions
 
-// Polyfill for roundRect (for older browsers)
-if (!CanvasRenderingContext2D.prototype.roundRect) {
-    CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radii) {
-        const radius = typeof radii === 'number' ? radii : (radii?.[0] || 0);
-        this.beginPath();
-        this.moveTo(x + radius, y);
-        this.lineTo(x + width - radius, y);
-        this.quadraticCurveTo(x + width, y, x + width, y + radius);
-        this.lineTo(x + width, y + height - radius);
-        this.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-        this.lineTo(x + radius, y + height);
-        this.quadraticCurveTo(x, y + height, x, y + height - radius);
-        this.lineTo(x, y + radius);
-        this.quadraticCurveTo(x, y, x + radius, y);
-        this.closePath();
-        return this;
-    };
-}
-
 const Utils = {
     // Random number between min and max
     random: (min, max) => Math.random() * (max - min) + min,
@@ -30,26 +11,13 @@ const Utils = {
     randomItem: (arr) => arr[Math.floor(Math.random() * arr.length)],
 
     // Clamp value between min and max
-    clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
+    clamp: (value, min, max) => Math.min(Math.max(value, min), max),
 
     // Linear interpolation
     lerp: (start, end, t) => start + (end - start) * t,
 
     // Distance between two points
     distance: (x1, y1, x2, y2) => Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2),
-
-    // Check if point is inside rectangle
-    pointInRect: (px, py, rx, ry, rw, rh) => {
-        return px >= rx && px <= rx + rw && py >= ry && py <= ry + rh;
-    },
-
-    // Convert hex to rgba
-    hexToRgba: (hex, alpha = 1) => {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    },
 
     // Shuffle array
     shuffle: (arr) => {
@@ -74,16 +42,98 @@ const Utils = {
         };
     },
 
+    // Show toast notification
+    showToast: (message, duration = 3000) => {
+        const existingToast = document.querySelector('.toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, duration);
+    },
+
+    // Load JSON file
+    loadJSON: async (url) => {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error('Error loading JSON:', error);
+            return null;
+        }
+    },
+
+    // Save to localStorage
+    saveLocal: (key, data) => {
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+            return true;
+        } catch (error) {
+            console.error('Error saving to localStorage:', error);
+            return false;
+        }
+    },
+
+    // Load from localStorage
+    loadLocal: (key) => {
+        try {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : null;
+        } catch (error) {
+            console.error('Error loading from localStorage:', error);
+            return null;
+        }
+    },
+
+    // Preload images
+    preloadImages: (urls) => {
+        return Promise.all(urls.map(url => {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error(`Failed to load image: ${url}`));
+                img.src = url;
+            });
+        }));
+    },
+
+    // Check if element is in viewport
+    isInViewport: (element) => {
+        const rect = element.getBoundingClientRect();
+        return (
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+    },
+
     // Generate unique ID
-    generateId: () => Date.now().toString(36) + Math.random().toString(36).substr(2),
+    generateId: () => {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    },
+
+    // Get viewport dimensions
+    getViewport: () => ({
+        width: window.innerWidth,
+        height: window.innerHeight
+    }),
 
     // Ease functions
     ease: {
         linear: t => t,
-        easeInOut: t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
-        easeOut: t => t * (2 - t),
-        easeIn: t => t * t,
-        bounce: t => {
+        easeInQuad: t => t * t,
+        easeOutQuad: t => t * (2 - t),
+        easeInOutQuad: t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+        easeOutBounce: t => {
             if (t < 1 / 2.75) {
                 return 7.5625 * t * t;
             } else if (t < 2 / 2.75) {
@@ -96,3 +146,6 @@ const Utils = {
         }
     }
 };
+
+// Make Utils available globally
+window.Utils = Utils;

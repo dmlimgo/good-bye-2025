@@ -2,91 +2,159 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Good Bye 2025</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2025 GentleCrew 연말파티</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Jua&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <!-- Loading Screen -->
     <div id="loading-screen">
         <div class="loading-content">
+            <img src="assets/logo/logo.jpg" alt="GentleCrew Logo" class="loading-logo">
             <h1 class="loading-title">Good Bye 2025</h1>
-            <p class="loading-subtitle">잠시만 기다려주세요...</p>
+            <p class="loading-subtitle">GentleCrew 연말파티</p>
             <div class="loading-bar-container">
-                <div class="loading-bar"></div>
+                <div class="loading-bar" id="loading-bar"></div>
             </div>
-            <p class="loading-percent">0%</p>
+            <p class="loading-text" id="loading-text">로딩중...</p>
         </div>
     </div>
 
-    <!-- Main Canvas -->
-    <canvas id="main-canvas"></canvas>
+    <!-- Main Container -->
+    <div id="main-container" class="hidden">
+        <!-- Canvas for animations (confetti, spotlight) -->
+        <canvas id="animation-canvas"></canvas>
 
-    <!-- Rolling Paper Popup -->
-    <div id="rolling-paper-popup" class="popup hidden">
-        <div class="popup-overlay"></div>
-        <div class="popup-content popup-menu">
-            <h2>롤링페이퍼</h2>
-            <button id="write-paper-btn" class="popup-btn">롤링페이퍼 쓰기</button>
-            <button id="view-paper-btn" class="popup-btn">롤링페이퍼 보기</button>
-            <button class="close-btn">닫기</button>
+        <!-- Scroll Container -->
+        <div id="scroll-container">
+            <!-- Page 1: 소공연장 -->
+            <section id="stage-section" class="page">
+                <div class="stage-background">
+                    <div class="stage-curtain left"></div>
+                    <div class="stage-curtain right"></div>
+                    <div class="stage-floor"></div>
+                    <div class="spotlight-container">
+                        <div class="spotlight" id="spotlight1"></div>
+                        <div class="spotlight" id="spotlight2"></div>
+                    </div>
+                </div>
+                <div id="characters-container"></div>
+                <div class="page-title">
+                    <img src="assets/logo/logo.jpg" alt="Logo" class="title-logo">
+                    <h2>2025 연말파티</h2>
+                </div>
+            </section>
+
+            <!-- Page 2: 롤링페이퍼 -->
+            <section id="rolling-paper-section" class="page">
+                <div class="rolling-paper-background">
+                    <div class="scroll-container" id="rolling-paper-trigger">
+                        <!-- 두루마리 윗봉 -->
+                        <div class="scroll-rod top-rod"></div>
+                        <!-- 펼쳐지는 종이 -->
+                        <div class="scroll-paper" id="scroll-paper">
+                            <div class="scroll-paper-content">
+                                <h3>롤링페이퍼</h3>
+                                <p class="scroll-hint">탭하여 메시지 남기기</p>
+                            </div>
+                        </div>
+                        <!-- 두루마리 아랫봉 (감겨있는 부분) -->
+                        <div class="scroll-rod bottom-rod">
+                            <div class="scroll-roll"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Page 3: Awards 액자 -->
+            <section id="awards-section" class="page">
+                <div class="awards-background">
+                    <h2 class="awards-title">2025 Awards</h2>
+                    <div class="awards-wall" id="awards-wall">
+                        <!-- Awards frames will be dynamically generated -->
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Scroll Indicator -->
+        <div class="scroll-indicator" id="scroll-indicator">
+            <div class="scroll-dot active" data-page="0"></div>
+            <div class="scroll-dot" data-page="1"></div>
+            <div class="scroll-dot" data-page="2"></div>
         </div>
     </div>
 
-    <!-- Write Paper Popup -->
-    <div id="write-paper-popup" class="popup hidden">
-        <div class="popup-overlay"></div>
-        <div class="popup-content write-paper-content">
-            <h2>롤링페이퍼 쓰기</h2>
-            <div class="sticky-note" id="new-sticky-note">
+    <!-- Rolling Paper Modal -->
+    <div id="rolling-paper-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content rolling-paper-menu">
+            <h3>롤링페이퍼</h3>
+            <button class="modal-btn" id="write-paper-btn">롤링페이퍼 쓰기</button>
+            <button class="modal-btn" id="view-paper-btn">롤링페이퍼 보기</button>
+            <button class="modal-btn close-btn" id="close-rolling-menu">닫기</button>
+        </div>
+    </div>
+
+    <!-- Write Paper Modal -->
+    <div id="write-paper-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content write-paper-content">
+            <div class="sticky-note" id="write-sticky-note">
                 <input type="text" id="author-input" placeholder="이름 (선택)" maxlength="10">
                 <textarea id="message-input" placeholder="메시지를 입력하세요..." maxlength="200"></textarea>
                 <div class="color-picker">
-                    <span class="color-option" data-color="#FFE4B5" style="background: #FFE4B5"></span>
-                    <span class="color-option" data-color="#FFB6C1" style="background: #FFB6C1"></span>
-                    <span class="color-option" data-color="#98FB98" style="background: #98FB98"></span>
-                    <span class="color-option" data-color="#87CEEB" style="background: #87CEEB"></span>
-                    <span class="color-option" data-color="#DDA0DD" style="background: #DDA0DD"></span>
+                    <div class="color-option" data-color="#FFE4B5" style="background:#FFE4B5"></div>
+                    <div class="color-option" data-color="#FFB6C1" style="background:#FFB6C1"></div>
+                    <div class="color-option" data-color="#98FB98" style="background:#98FB98"></div>
+                    <div class="color-option" data-color="#87CEEB" style="background:#87CEEB"></div>
+                    <div class="color-option" data-color="#DDA0DD" style="background:#DDA0DD"></div>
                 </div>
             </div>
-            <button id="submit-paper-btn" class="popup-btn">저장하기</button>
-            <button class="close-btn">닫기</button>
-        </div>
-    </div>
-
-    <!-- View Papers Popup -->
-    <div id="view-papers-popup" class="popup hidden">
-        <div class="popup-overlay"></div>
-        <div class="popup-content view-papers-content">
-            <h2>롤링페이퍼 보기</h2>
-            <div class="papers-container" id="papers-container">
-                <!-- Papers will be dynamically loaded -->
+            <div class="write-actions">
+                <button class="modal-btn" id="save-message-btn">저장</button>
+                <button class="modal-btn close-btn" id="close-write-modal">닫기</button>
             </div>
-            <button class="close-btn">닫기</button>
         </div>
     </div>
 
-    <!-- Awards Popup -->
-    <div id="awards-popup" class="popup hidden">
-        <div class="popup-overlay"></div>
-        <div class="popup-content awards-content">
-            <h2>2025 상장</h2>
+    <!-- View Papers Modal -->
+    <div id="view-papers-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content view-papers-content">
+            <div class="papers-header">
+                <h3>롤링페이퍼 보기</h3>
+                <button class="close-x-btn" id="close-view-papers">&times;</button>
+            </div>
+            <div class="papers-scroll-container" id="papers-scroll-container">
+                <!-- Sticky notes will be dynamically generated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Awards Grid Modal -->
+    <div id="awards-grid-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content awards-grid-content">
+            <div class="awards-grid-header">
+                <h3>2025 Awards</h3>
+                <button class="close-x-btn" id="close-awards-grid">&times;</button>
+            </div>
             <div class="awards-grid" id="awards-grid">
-                <!-- Awards will be dynamically loaded -->
+                <!-- Award items will be dynamically generated -->
             </div>
-            <button class="close-btn">닫기</button>
         </div>
     </div>
 
-    <!-- Award Detail Popup -->
-    <div id="award-detail-popup" class="popup hidden">
-        <div class="popup-overlay"></div>
-        <div class="popup-content award-detail-content">
-            <img id="award-detail-img" src="" alt="상장">
-            <button class="close-btn">닫기</button>
+    <!-- Award Detail Modal -->
+    <div id="award-detail-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content award-detail-content">
+            <button class="close-x-btn" id="close-award-detail">&times;</button>
+            <img id="award-detail-image" src="" alt="Award">
         </div>
     </div>
 

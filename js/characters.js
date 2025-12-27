@@ -1,570 +1,300 @@
-// Character system module
+// Character system - handles character creation and movement
 
 const Characters = {
-    list: [],
-    draggingCharacter: null,
-    dragOffset: { x: 0, y: 0 },
+    container: null,
+    members: [],
+    awards: [],
+    characters: [],
+    isAnimating: false,
+    animationFrame: null,
+    bounds: { left: 0, right: 0, top: 0, bottom: 0 },
 
-    // Character appearance presets
-    skinColors: ['#FFDAB9', '#DEB887', '#D2B48C', '#F5DEB3', '#FFE4C4', '#FFCBA4', '#8D5524', '#C68642'],
-    hairColors: ['#2C1810', '#4A3728', '#8B4513', '#CD853F', '#FFD700', '#FF6347', '#4169E1', '#32CD32', '#FF69B4', '#9400D3'],
-    shirtColors: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9', '#F8B500', '#00CED1'],
-    pantsColors: ['#2C3E50', '#34495E', '#1ABC9C', '#3498DB', '#9B59B6', '#E74C3C', '#2ECC71', '#F39C12'],
+    // Performance settings
+    updateInterval: 50, // Update every 50ms (20fps) for smooth bounce
+    lastUpdateTime: 0,
+    maxActiveMovers: 5, // Only 5 characters move at a time
 
-    // Initialize characters
-    async init(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
+    async init() {
+        this.container = document.getElementById('characters-container');
+        if (!this.container) return;
 
-        // Load members from JSON
-        try {
-            const response = await fetch('data/members.json');
-            const data = await response.json();
-            this.createCharacters(data.members);
-        } catch (error) {
-            console.error('Failed to load members:', error);
-            // Fallback: create some default characters
-            this.createCharacters([
-                { id: 1, name: '캐릭터1' },
-                { id: 2, name: '캐릭터2' },
-                { id: 3, name: '캐릭터3' }
-            ]);
-        }
+        // Load data
+        const [membersData, awardsData] = await Promise.all([
+            Utils.loadJSON('data/members.json'),
+            Utils.loadJSON('data/awards.json')
+        ]);
+
+        if (membersData) this.members = membersData.members;
+        if (awardsData) this.awards = awardsData.awards;
+
+        // Calculate bounds (stage area)
+        this.updateBounds();
+        window.addEventListener('resize', () => this.updateBounds());
+
+        // Create characters
+        this.createCharacters();
     },
 
-    // Create all characters
-    createCharacters(members) {
-        const w = this.canvas.width;
-        const h = this.canvas.height;
+    updateBounds() {
+        const viewport = Utils.getViewport();
+        const topMargin = 150; // Space for title
+        const bottomMargin = viewport.height * 0.15; // Stage floor area (reduced)
 
-        // Define walking area (floor area in front of stage)
-        const minX = w * 0.18;
-        const maxX = w * 0.82;
-        const minY = h * 0.68;
-        const maxY = h * 0.92;
-
-        members.forEach((member, index) => {
-            const character = this.createCharacter(member, index, minX, maxX, minY, maxY);
-            this.list.push(character);
-        });
-    },
-
-    // Create single character
-    createCharacter(member, index, minX, maxX, minY, maxY) {
-        // Randomize appearance
-        const skinColor = Utils.randomItem(this.skinColors);
-        const hairColor = Utils.randomItem(this.hairColors);
-        const shirtColor = Utils.randomItem(this.shirtColors);
-        const pantsColor = Utils.randomItem(this.pantsColors);
-
-        // Random position within bounds
-        const x = Utils.random(minX, maxX);
-        const y = Utils.random(minY, maxY);
-
-        // Scale based on Y position (perspective)
-        const scale = Utils.lerp(0.6, 1.0, (y - minY) / (maxY - minY));
-
-        return {
-            id: member.id,
-            name: member.name,
-            x: x,
-            y: y,
-            scale: scale,
-            baseScale: scale,
-
-            // Appearance
-            skinColor: skinColor,
-            hairColor: hairColor,
-            shirtColor: shirtColor,
-            pantsColor: pantsColor,
-            hairStyle: Utils.randomInt(0, 4),
-            hasGlasses: Math.random() > 0.7,
-
-            // Movement
-            targetX: x,
-            targetY: y,
-            speed: Utils.random(0.5, 1.5),
-            isMoving: false,
-            direction: 1, // 1 = right, -1 = left
-            moveTimer: Utils.random(0, 3000),
-            idleTimer: 0,
-
-            // Animation
-            animPhase: Utils.random(0, Math.PI * 2),
-            armSwing: 0,
-            legSwing: 0,
-            bounceOffset: 0,
-
-            // Dragging
-            isDragging: false,
-            wigglePhase: 0,
-
-            // Bounds
-            minX: minX,
-            maxX: maxX,
-            minY: minY,
-            maxY: maxY
+        this.bounds = {
+            left: 20,
+            right: viewport.width - 70,
+            top: topMargin,
+            bottom: viewport.height - bottomMargin - 60
         };
     },
 
-    // Update all characters
-    update(deltaTime) {
-        this.list.forEach(char => {
-            if (char.isDragging) {
-                // Wiggle animation when being dragged
-                char.wigglePhase += 0.3;
-                char.armSwing = Math.sin(char.wigglePhase) * 0.8;
-                char.legSwing = Math.sin(char.wigglePhase * 1.5) * 0.5;
-            } else {
-                this.updateMovement(char, deltaTime);
-                this.updateAnimation(char, deltaTime);
-            }
+    createCharacters() {
+        this.container.innerHTML = '';
+        this.characters = [];
 
-            // Update scale based on Y position (perspective)
-            const yRatio = (char.y - char.minY) / (char.maxY - char.minY);
-            char.scale = Utils.lerp(0.6, 1.0, yRatio);
+        // Create award lookup map
+        const awardMap = new Map();
+        this.awards.forEach(award => {
+            awardMap.set(award.id, award.title);
         });
 
-        // Sort by Y position for proper layering
-        this.list.sort((a, b) => a.y - b.y);
+        // Shuffle members for random positioning
+        const shuffledMembers = Utils.shuffle([...this.members]);
+
+        shuffledMembers.forEach((member, index) => {
+            const character = this.createCharacter(member, awardMap.get(member.id), index);
+            this.characters.push(character);
+            this.container.appendChild(character.element);
+        });
+
+        // Start animation
+        this.startAnimation();
     },
 
-    // Update character movement
-    updateMovement(char, deltaTime) {
-        char.moveTimer -= deltaTime;
+    createCharacter(member, status, index) {
+        // Create DOM element
+        const el = document.createElement('div');
+        el.className = 'character';
+        el.dataset.id = member.id;
 
-        if (!char.isMoving) {
-            // Idle state - wait then pick new target
-            if (char.moveTimer <= 0) {
-                // Pick random nearby target
-                const range = 100 * char.scale;
-                char.targetX = Utils.clamp(
-                    char.x + Utils.random(-range, range),
-                    char.minX,
-                    char.maxX
-                );
-                char.targetY = Utils.clamp(
-                    char.y + Utils.random(-range * 0.5, range * 0.5),
-                    char.minY,
-                    char.maxY
-                );
-                char.isMoving = true;
-                char.moveTimer = Utils.random(2000, 5000);
+        // Status badge (if has award)
+        if (status) {
+            const statusEl = document.createElement('div');
+            statusEl.className = 'character-status';
+            statusEl.textContent = `<${status}>`;
+            el.appendChild(statusEl);
+        }
 
-                // Set direction
-                char.direction = char.targetX > char.x ? 1 : -1;
+        // Name
+        const nameEl = document.createElement('div');
+        nameEl.className = 'character-name';
+        nameEl.textContent = member.name;
+        el.appendChild(nameEl);
+
+        // Avatar
+        const avatarEl = document.createElement('img');
+        avatarEl.className = 'character-avatar';
+        avatarEl.src = `assets/avatar/${member.id}.png`;
+        avatarEl.alt = member.name;
+        avatarEl.loading = 'lazy';
+        el.appendChild(avatarEl);
+        el._avatarEl = avatarEl;  // Store reference for direction flip
+
+        // Calculate initial position (spread across stage)
+        const cols = 7;
+        const rows = Math.ceil(this.members.length / cols);
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+
+        const areaWidth = this.bounds.right - this.bounds.left;
+        const areaHeight = this.bounds.bottom - this.bounds.top;
+
+        const cellWidth = areaWidth / cols;
+        const cellHeight = areaHeight / rows;
+
+        const x = this.bounds.left + col * cellWidth + Utils.random(10, cellWidth - 60);
+        const y = this.bounds.top + row * cellHeight + Utils.random(10, cellHeight - 70);
+
+        // Character state
+        const character = {
+            element: el,
+            member: member,
+            status: status,
+            x: x,
+            y: y,
+            targetX: x,
+            targetY: y,
+            moveTimer: Utils.random(3000, 6000),
+            pauseTimer: Utils.random(3000, 5000),
+            isPaused: true,
+            isMoving: false,
+            lastX: x,
+            lastY: y,
+            bouncePhase: Utils.random(0, Math.PI * 2),
+            bounceOffset: 0,
+            facingRight: false  // Default facing left
+        };
+
+        // Apply initial position
+        this.updateCharacterPosition(character);
+
+        // Add click handler
+        el.addEventListener('click', () => this.onCharacterClick(character));
+
+        return character;
+    },
+
+    updateCharacterPosition(character) {
+        // Use transform for GPU acceleration
+        character.element.style.transform = `translate(${character.x}px, ${character.y}px)`;
+        character.lastX = character.x;
+        character.lastY = character.y;
+    },
+
+    onCharacterClick(character) {
+        // Bounce effect on click using scale
+        character.element.style.transform = `translate(${character.x}px, ${character.y}px) scale(1.15)`;
+
+        setTimeout(() => {
+            character.element.style.transform = `translate(${character.x}px, ${character.y}px)`;
+        }, 150);
+
+        // Show toast with member info
+        let message = character.member.name;
+        if (character.status) {
+            message += ` - ${character.status}`;
+        }
+        Utils.showToast(message);
+    },
+
+    startAnimation() {
+        if (this.isAnimating) return;
+        this.isAnimating = true;
+        this.lastUpdateTime = performance.now();
+        this.animate();
+    },
+
+    stopAnimation() {
+        this.isAnimating = false;
+        if (this.animationFrame) {
+            cancelAnimationFrame(this.animationFrame);
+        }
+    },
+
+    animate() {
+        if (!this.isAnimating) return;
+
+        const now = performance.now();
+        const elapsed = now - this.lastUpdateTime;
+
+        // Only update every updateInterval ms (100ms = 10fps for logic)
+        if (elapsed >= this.updateInterval) {
+            this.lastUpdateTime = now;
+
+            // Count active movers
+            let activeMovers = 0;
+
+            this.characters.forEach(character => {
+                this.updateCharacter(character, elapsed, activeMovers);
+                if (character.isMoving) activeMovers++;
+            });
+        }
+
+        this.animationFrame = requestAnimationFrame(() => this.animate());
+    },
+
+    updateCharacter(character, deltaTime, currentActiveMovers) {
+        // Bouncing animation (always active)
+        character.bouncePhase += 0.03;
+        character.bounceOffset = Math.sin(character.bouncePhase) * 2;
+
+        // Handle pause state
+        if (character.isPaused) {
+            character.pauseTimer -= deltaTime;
+            if (character.pauseTimer <= 0) {
+                // Only start moving if under max active movers
+                if (currentActiveMovers < this.maxActiveMovers) {
+                    character.isPaused = false;
+                    character.isMoving = true;
+                    character.moveTimer = Utils.random(3000, 6000);
+                    this.setNewTarget(character);
+                } else {
+                    // Wait a bit more
+                    character.pauseTimer = Utils.random(1000, 2000);
+                }
             }
         } else {
-            // Moving towards target
-            const dx = char.targetX - char.x;
-            const dy = char.targetY - char.y;
+            character.moveTimer -= deltaTime;
+
+            // Move towards target
+            const dx = character.targetX - character.x;
+            const dy = character.targetY - character.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist > 2) {
-                const moveSpeed = char.speed * (deltaTime / 16);
-                char.x += (dx / dist) * moveSpeed;
-                char.y += (dy / dist) * moveSpeed;
+            if (dist > 1) {
+                const speed = 0.5;
+                character.x += dx * speed * (deltaTime / 1000);
+                character.y += dy * speed * (deltaTime / 1000);
+            }
 
-                // Update direction
-                if (Math.abs(dx) > 0.5) {
-                    char.direction = dx > 0 ? 1 : -1;
-                }
-            } else {
-                // Reached target
-                char.isMoving = false;
-                char.moveTimer = Utils.random(1000, 4000);
+            // Check if movement time is up or reached target
+            if (character.moveTimer <= 0 || dist <= 1) {
+                character.isPaused = true;
+                character.isMoving = false;
+                character.pauseTimer = Utils.random(3000, 5000);
             }
         }
-    },
 
-    // Update character animation
-    updateAnimation(char, deltaTime) {
-        char.animPhase += deltaTime * 0.005;
-
-        if (char.isMoving) {
-            // Walking animation
-            char.armSwing = Math.sin(char.animPhase * 8) * 0.4;
-            char.legSwing = Math.sin(char.animPhase * 8) * 0.3;
-            char.bounceOffset = Math.abs(Math.sin(char.animPhase * 8)) * 2;
-        } else {
-            // Idle animation - subtle breathing/swaying
-            char.armSwing = Math.sin(char.animPhase * 2) * 0.1;
-            char.legSwing = 0;
-            char.bounceOffset = Math.sin(char.animPhase * 3) * 0.5;
-        }
-    },
-
-    // Draw all characters
-    draw() {
-        this.list.forEach(char => {
-            this.drawCharacter(char);
-        });
-    },
-
-    // Draw single character
-    drawCharacter(char) {
-        const ctx = this.ctx;
-        const s = char.scale * 40; // Base size multiplier
-
-        ctx.save();
-        ctx.translate(char.x, char.y - char.bounceOffset);
-
-        // Flip based on direction
-        if (char.direction === -1) {
-            ctx.scale(-1, 1);
-        }
-
-        // Shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.beginPath();
-        ctx.ellipse(0, s * 1.5, s * 0.5, s * 0.15, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Draw body parts
-        this.drawLegs(ctx, char, s);
-        this.drawBody(ctx, char, s);
-        this.drawArms(ctx, char, s);
-        this.drawHead(ctx, char, s);
-
-        ctx.restore();
-
-        // Draw name above character (not flipped)
-        this.drawName(char);
-    },
-
-    // Draw legs
-    drawLegs(ctx, char, s) {
-        const legWidth = s * 0.18;
-        const legHeight = s * 0.5;
-
-        // Left leg
-        ctx.save();
-        ctx.translate(-s * 0.15, s * 0.8);
-        ctx.rotate(char.legSwing);
-
-        ctx.fillStyle = char.pantsColor;
-        ctx.beginPath();
-        ctx.roundRect(-legWidth / 2, 0, legWidth, legHeight, 5);
-        ctx.fill();
-
-        // Shoe
-        ctx.fillStyle = '#333';
-        ctx.beginPath();
-        ctx.ellipse(0, legHeight, legWidth * 0.7, legWidth * 0.4, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.restore();
-
-        // Right leg
-        ctx.save();
-        ctx.translate(s * 0.15, s * 0.8);
-        ctx.rotate(-char.legSwing);
-
-        ctx.fillStyle = char.pantsColor;
-        ctx.beginPath();
-        ctx.roundRect(-legWidth / 2, 0, legWidth, legHeight, 5);
-        ctx.fill();
-
-        // Shoe
-        ctx.fillStyle = '#333';
-        ctx.beginPath();
-        ctx.ellipse(0, legHeight, legWidth * 0.7, legWidth * 0.4, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.restore();
-    },
-
-    // Draw body/torso
-    drawBody(ctx, char, s) {
-        const bodyWidth = s * 0.6;
-        const bodyHeight = s * 0.7;
-
-        ctx.fillStyle = char.shirtColor;
-        ctx.beginPath();
-        ctx.roundRect(-bodyWidth / 2, 0, bodyWidth, bodyHeight, 8);
-        ctx.fill();
-
-        // Shirt detail (collar or pattern)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.beginPath();
-        ctx.moveTo(-s * 0.1, 0);
-        ctx.lineTo(0, s * 0.15);
-        ctx.lineTo(s * 0.1, 0);
-        ctx.closePath();
-        ctx.fill();
-    },
-
-    // Draw arms
-    drawArms(ctx, char, s) {
-        const armWidth = s * 0.15;
-        const armLength = s * 0.45;
-
-        // Left arm
-        ctx.save();
-        ctx.translate(-s * 0.35, s * 0.15);
-        ctx.rotate(-char.armSwing - 0.2);
-
-        // Upper arm (shirt color)
-        ctx.fillStyle = char.shirtColor;
-        ctx.beginPath();
-        ctx.roundRect(-armWidth / 2, 0, armWidth, armLength * 0.5, 4);
-        ctx.fill();
-
-        // Lower arm/hand (skin)
-        ctx.fillStyle = char.skinColor;
-        ctx.beginPath();
-        ctx.roundRect(-armWidth / 2, armLength * 0.4, armWidth, armLength * 0.6, 4);
-        ctx.fill();
-
-        // Hand
-        ctx.beginPath();
-        ctx.arc(0, armLength, armWidth * 0.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.restore();
-
-        // Right arm
-        ctx.save();
-        ctx.translate(s * 0.35, s * 0.15);
-        ctx.rotate(char.armSwing + 0.2);
-
-        ctx.fillStyle = char.shirtColor;
-        ctx.beginPath();
-        ctx.roundRect(-armWidth / 2, 0, armWidth, armLength * 0.5, 4);
-        ctx.fill();
-
-        ctx.fillStyle = char.skinColor;
-        ctx.beginPath();
-        ctx.roundRect(-armWidth / 2, armLength * 0.4, armWidth, armLength * 0.6, 4);
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(0, armLength, armWidth * 0.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.restore();
-    },
-
-    // Draw head
-    drawHead(ctx, char, s) {
-        const headSize = s * 0.45;
-
-        ctx.save();
-        ctx.translate(0, -s * 0.1);
-
-        // Head shape
-        ctx.fillStyle = char.skinColor;
-        ctx.beginPath();
-        ctx.arc(0, 0, headSize, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Hair
-        this.drawHair(ctx, char, s, headSize);
-
-        // Face
-        this.drawFace(ctx, char, s, headSize);
-
-        ctx.restore();
-    },
-
-    // Draw hair based on style
-    drawHair(ctx, char, s, headSize) {
-        ctx.fillStyle = char.hairColor;
-
-        switch (char.hairStyle) {
-            case 0: // Short spiky
-                for (let i = -3; i <= 3; i++) {
-                    const angle = (i * 0.3) - Math.PI / 2;
-                    const x = Math.cos(angle) * headSize * 0.7;
-                    const y = Math.sin(angle) * headSize * 0.7;
-                    ctx.beginPath();
-                    ctx.moveTo(x * 0.5, y * 0.5 - headSize * 0.3);
-                    ctx.lineTo(x, y - headSize * 0.5);
-                    ctx.lineTo(x * 0.8, y * 0.3 - headSize * 0.2);
-                    ctx.fill();
-                }
-                break;
-
-            case 1: // Bowl cut
-                ctx.beginPath();
-                ctx.arc(0, -headSize * 0.2, headSize * 0.9, Math.PI, 0);
-                ctx.fill();
-                break;
-
-            case 2: // Side part
-                ctx.beginPath();
-                ctx.ellipse(-headSize * 0.2, -headSize * 0.5, headSize * 0.8, headSize * 0.4, -0.2, 0, Math.PI * 2);
-                ctx.fill();
-                break;
-
-            case 3: // Curly/fluffy
-                for (let i = 0; i < 8; i++) {
-                    const angle = (i / 8) * Math.PI * 2 - Math.PI / 2;
-                    const x = Math.cos(angle) * headSize * 0.6;
-                    const y = Math.sin(angle) * headSize * 0.6 - headSize * 0.2;
-                    ctx.beginPath();
-                    ctx.arc(x, y, headSize * 0.3, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                break;
-
-            case 4: // Long hair
-                ctx.beginPath();
-                ctx.moveTo(-headSize * 0.8, -headSize * 0.3);
-                ctx.quadraticCurveTo(-headSize, headSize * 0.5, -headSize * 0.6, headSize);
-                ctx.lineTo(-headSize * 0.3, headSize * 0.3);
-                ctx.lineTo(headSize * 0.3, headSize * 0.3);
-                ctx.lineTo(headSize * 0.6, headSize);
-                ctx.quadraticCurveTo(headSize, headSize * 0.5, headSize * 0.8, -headSize * 0.3);
-                ctx.arc(0, -headSize * 0.2, headSize * 0.8, 0, Math.PI, true);
-                ctx.fill();
-                break;
-        }
-    },
-
-    // Draw face features
-    drawFace(ctx, char, s, headSize) {
-        // Eyes
-        const eyeSize = headSize * 0.15;
-        const eyeY = 0;
-        const eyeSpacing = headSize * 0.35;
-
-        // Eye whites
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.ellipse(-eyeSpacing, eyeY, eyeSize * 1.2, eyeSize, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(eyeSpacing, eyeY, eyeSize * 1.2, eyeSize, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Pupils
-        ctx.fillStyle = '#333';
-        ctx.beginPath();
-        ctx.arc(-eyeSpacing + eyeSize * 0.2, eyeY, eyeSize * 0.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(eyeSpacing + eyeSize * 0.2, eyeY, eyeSize * 0.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Eye shine
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(-eyeSpacing + eyeSize * 0.3, eyeY - eyeSize * 0.2, eyeSize * 0.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(eyeSpacing + eyeSize * 0.3, eyeY - eyeSize * 0.2, eyeSize * 0.2, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Glasses (if has)
-        if (char.hasGlasses) {
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.ellipse(-eyeSpacing, eyeY, eyeSize * 1.5, eyeSize * 1.3, 0, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.ellipse(eyeSpacing, eyeY, eyeSize * 1.5, eyeSize * 1.3, 0, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(-eyeSpacing + eyeSize * 1.5, eyeY);
-            ctx.lineTo(eyeSpacing - eyeSize * 1.5, eyeY);
-            ctx.stroke();
-        }
-
-        // Mouth (smile)
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.arc(0, headSize * 0.3, headSize * 0.25, 0.2, Math.PI - 0.2);
-        ctx.stroke();
-
-        // Blush
-        ctx.fillStyle = 'rgba(255, 150, 150, 0.3)';
-        ctx.beginPath();
-        ctx.ellipse(-eyeSpacing - eyeSize, headSize * 0.2, eyeSize * 0.8, eyeSize * 0.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(eyeSpacing + eyeSize, headSize * 0.2, eyeSize * 0.8, eyeSize * 0.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-    },
-
-    // Draw name above character
-    drawName(char) {
-        const ctx = this.ctx;
-        const nameY = char.y - char.scale * 70 - char.bounceOffset;
-
-        ctx.save();
-
-        // Name background
-        ctx.font = `bold ${12 * char.scale}px "Jua", sans-serif`;
-        const textWidth = ctx.measureText(char.name).width;
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.beginPath();
-        ctx.roundRect(char.x - textWidth / 2 - 6, nameY - 10, textWidth + 12, 18, 4);
-        ctx.fill();
-
-        // Name text
-        ctx.fillStyle = '#fff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(char.name, char.x, nameY);
-
-        ctx.restore();
-    },
-
-    // Get character at position
-    getCharacterAt(x, y) {
-        // Check in reverse order (top-most first)
-        for (let i = this.list.length - 1; i >= 0; i--) {
-            const char = this.list[i];
-            const hitRadius = char.scale * 35;
-
-            if (Utils.distance(x, y, char.x, char.y - char.scale * 30) < hitRadius) {
-                return char;
+        // Update DOM with bounce offset
+        const displayY = character.y + character.bounceOffset;
+        if (Math.abs(character.x - character.lastX) > 0.3 ||
+            Math.abs(displayY - character.lastY) > 0.3) {
+            character.element.style.transform = `translate(${character.x}px, ${displayY}px)`;
+            // Flip only avatar based on direction
+            const avatarEl = character.element._avatarEl;
+            if (avatarEl) {
+                avatarEl.style.transform = character.facingRight ? 'scaleX(-1)' : 'scaleX(1)';
             }
-        }
-        return null;
-    },
-
-    // Start dragging character
-    startDrag(x, y) {
-        const char = this.getCharacterAt(x, y);
-        if (char) {
-            char.isDragging = true;
-            char.isMoving = false;
-            this.draggingCharacter = char;
-            this.dragOffset.x = char.x - x;
-            this.dragOffset.y = char.y - y;
-
-            // Move to end of list (draw on top)
-            const index = this.list.indexOf(char);
-            this.list.splice(index, 1);
-            this.list.push(char);
-
-            return true;
-        }
-        return false;
-    },
-
-    // Update drag position
-    updateDrag(x, y) {
-        if (this.draggingCharacter) {
-            const char = this.draggingCharacter;
-            char.x = Utils.clamp(x + this.dragOffset.x, char.minX, char.maxX);
-            char.y = Utils.clamp(y + this.dragOffset.y, char.minY, char.maxY);
+            character.lastX = character.x;
+            character.lastY = displayY;
         }
     },
 
-    // End dragging
-    endDrag() {
-        if (this.draggingCharacter) {
-            this.draggingCharacter.isDragging = false;
-            this.draggingCharacter.wigglePhase = 0;
-            this.draggingCharacter.moveTimer = Utils.random(1000, 2000);
-            this.draggingCharacter = null;
+    setNewTarget(character) {
+        // Movement range
+        const moveRange = 70;
+        let newX = character.x + Utils.random(-moveRange, moveRange);
+        let newY = character.y + Utils.random(-moveRange / 2, moveRange / 2);
+
+        // Clamp to bounds
+        newX = Utils.clamp(newX, this.bounds.left, this.bounds.right);
+        newY = Utils.clamp(newY, this.bounds.top, this.bounds.bottom);
+
+        // Set facing direction based on movement
+        if (newX > character.x) {
+            character.facingRight = true;
+        } else if (newX < character.x) {
+            character.facingRight = false;
+        }
+
+        character.targetX = newX;
+        character.targetY = newY;
+    },
+
+    // Pause all character animations (when not on stage page)
+    pause() {
+        this.isAnimating = false;
+    },
+
+    // Resume character animations
+    resume() {
+        if (!this.isAnimating) {
+            this.isAnimating = true;
+            this.lastTime = performance.now();
+            this.animate();
         }
     }
 };
+
+// Make Characters available globally
+window.Characters = Characters;

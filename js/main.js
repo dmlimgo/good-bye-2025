@@ -1,322 +1,176 @@
 // Main application entry point
 
 const App = {
-    canvas: null,
-    ctx: null,
+    currentPage: 0,
+    totalPages: 3,
     isLoading: true,
-    loadProgress: 0,
-    lastTime: 0,
-    isMouseDown: false,
-    wasDragging: false,
-    mouseX: 0,
-    mouseY: 0,
-    mouseDownX: 0,
-    mouseDownY: 0,
+    loadingProgress: 0,
 
-    // Initialize application
     async init() {
-        // Setup canvas
-        this.canvas = document.getElementById('main-canvas');
-        this.ctx = this.canvas.getContext('2d');
+        // Start loading sequence
+        await this.loadAssets();
 
-        // Handle resize
-        this.handleResize();
-        window.addEventListener('resize', () => this.handleResize());
+        // Initialize all modules
+        Background.init();
+        await Characters.init();
+        await RollingPaper.init();
+        await Awards.init();
 
-        // Start loading
-        await this.load();
+        // Setup scroll handling
+        this.setupScrollHandling();
 
-        // Setup interactions
-        this.setupInteractions();
+        // Hide loading screen and show main content
+        this.hideLoadingScreen();
 
-        // Start game loop
-        this.lastTime = performance.now();
-        requestAnimationFrame((time) => this.gameLoop(time));
+        // Start animations
+        Background.start();
     },
 
-    // Handle window resize
-    handleResize() {
-        const dpr = window.devicePixelRatio || 1;
-        const rect = this.canvas.getBoundingClientRect();
+    async loadAssets() {
+        const loadingBar = document.getElementById('loading-bar');
+        const loadingText = document.getElementById('loading-text');
 
-        this.canvas.width = rect.width * dpr;
-        this.canvas.height = rect.height * dpr;
+        // Simulate loading with progress
+        const steps = [
+            { text: '에셋 불러오는 중...', progress: 20 },
+            { text: '캐릭터 준비 중...', progress: 40 },
+            { text: '무대 설정 중...', progress: 60 },
+            { text: '롤링페이퍼 준비 중...', progress: 80 },
+            { text: '거의 다 됐어요!', progress: 95 },
+            { text: '완료!', progress: 100 }
+        ];
 
-        this.ctx.scale(dpr, dpr);
-
-        // Store display size
-        this.displayWidth = rect.width;
-        this.displayHeight = rect.height;
-
-        // Reinitialize background areas if needed
-        if (Background.canvas) {
-            Background.canvas = this.canvas;
-            Background.ctx = this.ctx;
+        for (const step of steps) {
+            if (loadingText) loadingText.textContent = step.text;
+            if (loadingBar) loadingBar.style.width = `${step.progress}%`;
+            await this.delay(300 + Math.random() * 200);
         }
+
+        // Small delay before hiding loading screen
+        await this.delay(500);
     },
 
-    // Load all resources
-    async load() {
-        const loadingBar = document.querySelector('.loading-bar');
-        const loadingPercent = document.querySelector('.loading-percent');
-
-        const updateProgress = (progress) => {
-            this.loadProgress = progress;
-            loadingBar.style.width = `${progress}%`;
-            loadingPercent.textContent = `${Math.round(progress)}%`;
-        };
-
-        try {
-            // Initialize background
-            updateProgress(10);
-            Background.init(this.canvas);
-            await this.delay(200);
-
-            // Initialize characters
-            updateProgress(30);
-            await Characters.init(this.canvas);
-            await this.delay(300);
-
-            // Initialize rolling paper
-            updateProgress(60);
-            await RollingPaper.init();
-            await this.delay(200);
-
-            // Initialize awards
-            updateProgress(80);
-            await Awards.init();
-            await this.delay(200);
-
-            // Final setup
-            updateProgress(100);
-            await this.delay(500);
-
-            // Hide loading screen
-            this.hideLoadingScreen();
-
-        } catch (error) {
-            console.error('Loading error:', error);
-            // Still hide loading screen even if there's an error
-            updateProgress(100);
-            await this.delay(500);
-            this.hideLoadingScreen();
-        }
-    },
-
-    // Hide loading screen
     hideLoadingScreen() {
         const loadingScreen = document.getElementById('loading-screen');
-        loadingScreen.classList.add('hidden');
+        const mainContainer = document.getElementById('main-container');
+
+        if (loadingScreen) {
+            loadingScreen.style.transition = 'opacity 0.5s ease';
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+            }, 500);
+        }
+
+        if (mainContainer) {
+            mainContainer.classList.remove('hidden');
+        }
+
         this.isLoading = false;
     },
 
-    // Setup mouse/touch interactions
-    setupInteractions() {
-        const canvas = this.canvas;
+    setupScrollHandling() {
+        const scrollContainer = document.getElementById('scroll-container');
+        const scrollDots = document.querySelectorAll('.scroll-dot');
 
-        // Mouse events
-        canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        canvas.addEventListener('mouseleave', (e) => this.handleMouseUp(e));
+        if (!scrollContainer) return;
 
-        // Touch events
-        canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
-        canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
-        canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e));
+        // Handle scroll to update indicator
+        scrollContainer.addEventListener('scroll', Utils.debounce(() => {
+            const scrollTop = scrollContainer.scrollTop;
+            const pageHeight = window.innerHeight;
+            const currentPage = Math.round(scrollTop / pageHeight);
 
-        // Click events for interactive areas
-        canvas.addEventListener('click', (e) => this.handleClick(e));
-
-        // Cursor style
-        canvas.addEventListener('mousemove', (e) => {
-            const pos = this.getEventPosition(e);
-            const char = Characters.getCharacterAt(pos.x, pos.y);
-            const isOverRollingPaper = Background.isRollingPaperClick(pos.x, pos.y);
-            const isOverAwards = Background.isAwardsClick(pos.x, pos.y);
-
-            if (char || isOverRollingPaper || isOverAwards) {
-                canvas.style.cursor = 'pointer';
-            } else {
-                canvas.style.cursor = 'default';
+            if (currentPage !== this.currentPage) {
+                this.currentPage = currentPage;
+                this.onPageChange(currentPage);
             }
+
+            // Update scroll dots
+            scrollDots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentPage);
+            });
+        }, 50));
+
+        // Click on dots to navigate
+        scrollDots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                const targetScroll = index * window.innerHeight;
+                scrollContainer.scrollTo({
+                    top: targetScroll,
+                    behavior: 'smooth'
+                });
+            });
         });
+
+        // Initial state
+        this.updatePageState(0);
     },
 
-    // Get position from mouse/touch event
-    getEventPosition(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const clientX = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
-        const clientY = e.clientY || (e.touches && e.touches[0]?.clientY) || 0;
-
-        return {
-            x: clientX - rect.left,
-            y: clientY - rect.top
-        };
+    onPageChange(pageIndex) {
+        this.updatePageState(pageIndex);
     },
 
-    // Handle mouse down
-    handleMouseDown(e) {
-        const pos = this.getEventPosition(e);
-        this.isMouseDown = true;
-        this.wasDragging = false;
-        this.mouseX = pos.x;
-        this.mouseY = pos.y;
-        this.mouseDownX = pos.x;
-        this.mouseDownY = pos.y;
+    updatePageState(pageIndex) {
+        // Manage animations based on current page
+        const scrollPaper = document.getElementById('scroll-paper');
 
-        // Try to start dragging a character
-        Characters.startDrag(pos.x, pos.y);
-    },
-
-    // Handle mouse move
-    handleMouseMove(e) {
-        if (!this.isMouseDown) return;
-
-        const pos = this.getEventPosition(e);
-        this.mouseX = pos.x;
-        this.mouseY = pos.y;
-
-        // Check if dragged more than 5 pixels
-        const dist = Utils.distance(this.mouseDownX, this.mouseDownY, pos.x, pos.y);
-        if (dist > 5) {
-            this.wasDragging = true;
-        }
-
-        Characters.updateDrag(pos.x, pos.y);
-    },
-
-    // Handle mouse up
-    handleMouseUp(e) {
-        this.isMouseDown = false;
-        Characters.endDrag();
-    },
-
-    // Handle touch start
-    handleTouchStart(e) {
-        e.preventDefault();
-        const pos = this.getEventPosition(e);
-        this.isMouseDown = true;
-        this.wasDragging = false;
-        this.mouseX = pos.x;
-        this.mouseY = pos.y;
-        this.mouseDownX = pos.x;
-        this.mouseDownY = pos.y;
-
-        Characters.startDrag(pos.x, pos.y);
-    },
-
-    // Handle touch move
-    handleTouchMove(e) {
-        e.preventDefault();
-        if (!this.isMouseDown) return;
-
-        const pos = this.getEventPosition(e);
-        this.mouseX = pos.x;
-        this.mouseY = pos.y;
-
-        // Check if dragged more than 5 pixels
-        const dist = Utils.distance(this.mouseDownX, this.mouseDownY, pos.x, pos.y);
-        if (dist > 5) {
-            this.wasDragging = true;
-        }
-
-        Characters.updateDrag(pos.x, pos.y);
-    },
-
-    // Handle touch end
-    handleTouchEnd(e) {
-        // Handle tap (if not dragging)
-        if (!this.wasDragging) {
-            // Check rolling paper area
-            if (Background.isRollingPaperClick(this.mouseX, this.mouseY)) {
-                RollingPaper.showMainPopup();
-            }
-            // Check awards area
-            else if (Background.isAwardsClick(this.mouseX, this.mouseY)) {
-                Awards.showAwardsPopup();
-            }
-        }
-
-        this.isMouseDown = false;
-        Characters.endDrag();
-    },
-
-    // Handle click on interactive areas
-    handleClick(e) {
-        // Don't process if we were dragging
-        if (this.wasDragging) return;
-
-        const pos = this.getEventPosition(e);
-
-        // Check rolling paper area
-        if (Background.isRollingPaperClick(pos.x, pos.y)) {
-            RollingPaper.showMainPopup();
-            return;
-        }
-
-        // Check awards area
-        if (Background.isAwardsClick(pos.x, pos.y)) {
-            Awards.showAwardsPopup();
-            return;
+        switch (pageIndex) {
+            case 0: // Stage page
+                Characters.resume();
+                Background.start();
+                // Roll up the paper when leaving
+                if (scrollPaper) scrollPaper.classList.remove('unrolled');
+                break;
+            case 1: // Rolling paper page
+                Characters.pause();
+                Background.stop();
+                Background.clear();
+                // Unroll the paper with delay
+                if (scrollPaper) {
+                    setTimeout(() => {
+                        scrollPaper.classList.add('unrolled');
+                    }, 300);
+                }
+                break;
+            case 2: // Awards page
+                Characters.pause();
+                Background.stop();
+                Background.clear();
+                // Roll up the paper when leaving
+                if (scrollPaper) scrollPaper.classList.remove('unrolled');
+                break;
         }
     },
 
-    // Main game loop
-    gameLoop(currentTime) {
-        // Calculate delta time
-        const deltaTime = currentTime - this.lastTime;
-        this.lastTime = currentTime;
-
-        // Update
-        this.update(deltaTime);
-
-        // Render
-        this.render();
-
-        // Next frame
-        requestAnimationFrame((time) => this.gameLoop(time));
-    },
-
-    // Update game state
-    update(deltaTime) {
-        if (this.isLoading) return;
-
-        // Update characters
-        Characters.update(deltaTime);
-    },
-
-    // Render everything
-    render() {
-        if (this.isLoading) return;
-
-        const w = this.displayWidth;
-        const h = this.displayHeight;
-
-        // Draw background
-        Background.draw(w, h);
-
-        // Draw characters
-        Characters.draw();
-    },
-
-    // Utility: delay promise
     delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 };
 
-// Start application when DOM is loaded
+// Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     App.init();
 });
 
-// Handle visibility change (pause when tab is hidden)
+// Handle visibility change (pause/resume when tab is hidden/visible)
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-        // Pause animations
+        Characters.pause();
+        Background.stop();
     } else {
-        // Resume
-        App.lastTime = performance.now();
+        if (App.currentPage === 0) {
+            Characters.resume();
+            Background.start();
+        }
     }
 });
+
+// Handle window resize
+window.addEventListener('resize', Utils.debounce(() => {
+    Background.resize();
+    Characters.updateBounds();
+}, 250));
+
+// Make App available globally
+window.App = App;
