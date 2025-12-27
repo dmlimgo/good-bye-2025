@@ -275,153 +275,166 @@ html, body {
     width: 100%;
     height: 100%;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     position: relative;
+    padding-left: 1%;
+    overflow: hidden;
 }
 
-/* 두루마리 컨테이너 */
-.scroll-container {
+/* 두루마리 래퍼 */
+.scroll-wrapper {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    cursor: pointer;
+    height: 77vh;
     position: relative;
 }
 
-/* 두루마리 봉 */
+/* 두루마리 봉 (세로, 왼쪽) */
 .scroll-rod {
-    width: 30px;
-    height: 180px;
+    width: 28px;
+    height: 77vh;
     background: linear-gradient(90deg, #8B7355 0%, #A08060 30%, #C4A574 50%, #A08060 70%, #8B7355 100%);
-    border-radius: 15px;
+    border-radius: 14px;
     position: relative;
     z-index: 10;
+    flex-shrink: 0;
 }
 
 .scroll-rod::before,
 .scroll-rod::after {
     content: '';
     position: absolute;
-    width: 36px;
-    height: 12px;
+    width: 34px;
+    height: 14px;
     background: linear-gradient(180deg, #6B5344 0%, #8B7355 50%, #6B5344 100%);
-    border-radius: 3px;
+    border-radius: 4px;
     left: -3px;
 }
 
 .scroll-rod::before {
-    top: -2px;
+    top: -4px;
 }
 
 .scroll-rod::after {
-    bottom: -2px;
-}
-
-.top-rod {
-    margin-bottom: -5px;
-}
-
-.bottom-rod {
-    margin-top: -5px;
-    position: relative;
+    bottom: -4px;
 }
 
 /* 감겨있는 두루마리 부분 */
 .scroll-roll {
     position: absolute;
-    right: -25px;
+    left: 0px;
     top: 50%;
     transform: translateY(-50%);
-    width: 50px;
-    height: 160px;
+    width: 35px;
+    height: 68vh;
     background: linear-gradient(90deg,
-        #E8DCC8 0%,
-        #F5EDE0 20%,
-        #E8DCC8 40%,
-        #DFD3BF 60%,
-        #D5C9B5 80%,
-        #C8BBAA 100%
+        #D5C9B5 0%,
+        #E8DCC8 30%,
+        #F5EDE0 50%,
+        #E8DCC8 70%,
+        #DFD3BF 100%
     );
-    border-radius: 25px;
+    border-radius: 0 18px 18px 0;
     z-index: 5;
 }
 
-.scroll-roll::before {
+.scroll-roll::after {
     content: '';
     position: absolute;
-    left: 5px;
-    top: 10px;
-    bottom: 10px;
-    width: 8px;
-    background: linear-gradient(90deg, rgba(0,0,0,0.1) 0%, transparent 100%);
-    border-radius: 4px;
+    right: 5px;
+    top: 15px;
+    bottom: 15px;
+    width: 6px;
+    background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.08) 100%);
+    border-radius: 3px;
+}
+
+/* 드래그 가능한 종이 영역 */
+.scroll-paper-wrapper {
+    width: calc(100vw);
+    height: 68vh;
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-left: -5px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    cursor: grab;
+}
+
+.scroll-paper-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+.scroll-paper-wrapper:active {
+    cursor: grabbing;
 }
 
 /* 펼쳐지는 종이 */
 .scroll-paper {
-    width: 0;
-    height: 300px;
-    background: linear-gradient(180deg, #F5EDE0 0%, #EDE5D8 50%, #F5EDE0 100%);
-    border-left: 2px solid #D5C9B5;
-    border-right: 2px solid #D5C9B5;
-    overflow: hidden;
-    transition: width 0.8s ease-out;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    width: max-content;
+    min-width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #F5EDE0 0%, #EDE5D8 50%, #F5EDE0 100%);
+    border-top: 2px solid #D5C9B5;
+    border-bottom: 2px solid #D5C9B5;
+    border-right: 2px solid #D5C9B5;
+    border-radius: 0 8px 8px 0;
     position: relative;
+    padding: 40px 60px;
+    box-sizing: border-box;
 }
 
 .scroll-paper::before {
     content: '';
     position: absolute;
+    left: 0;
     top: 0;
-    left: 0;
-    right: 0;
-    height: 10px;
-    background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, transparent 100%);
-}
-
-.scroll-paper::after {
-    content: '';
-    position: absolute;
     bottom: 0;
-    left: 0;
-    right: 0;
-    height: 10px;
-    background: linear-gradient(0deg, rgba(0,0,0,0.05) 0%, transparent 100%);
+    width: 15px;
+    background: linear-gradient(90deg, rgba(0,0,0,0.06) 0%, transparent 100%);
+    pointer-events: none;
 }
 
-.scroll-paper.unrolled {
-    width: 200px;
+/* 메시지 컨테이너 */
+.scroll-messages {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 40px 80px;
+    height: 100%;
+    width: max-content;
+    padding-right: 60px;
 }
 
-.scroll-paper-content {
-    text-align: center;
-    opacity: 0;
-    transition: opacity 0.5s ease 0.5s;
-    white-space: nowrap;
+/* 개별 메시지 */
+.scroll-message {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    color: #4A3C31;
+    max-width: 304px;
+    line-height: 1.6;
+    word-break: keep-all;
+    flex-shrink: 0;
+    padding: 10px;
 }
 
-.scroll-paper.unrolled .scroll-paper-content {
-    opacity: 1;
-}
-
-.scroll-paper-content h3 {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #5C4A3D;
-    margin-bottom: 10px;
-}
-
-.scroll-hint {
-    font-size: 0.85rem;
+.scroll-message .message-author {
+    font-size: 0.8rem;
     color: #8B7355;
+    margin-top: 8px;
+    text-align: right;
 }
 
-.scroll-container:active .scroll-paper {
-    background: linear-gradient(180deg, #EDE5D8 0%, #E5DDD0 50%, #EDE5D8 100%);
+/* 빈 상태 */
+.scroll-empty {
+    color: #A09080;
+    font-size: 1rem;
+    white-space: nowrap;
 }
 
 /* Awards Section (Page 3) */
@@ -480,29 +493,71 @@ html, body {
 }
 
 /* Scroll Indicator */
-.scroll-indicator {
+/* Scroll Arrows */
+.scroll-arrow {
     position: fixed;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 200;
-}
-
-.scroll-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
     cursor: pointer;
-    transition: all 0.3s ease;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-.scroll-dot.active {
-    background: #ffd700;
-    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+.scroll-arrow.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.arrow-up {
+    top: 20px;
+}
+
+.arrow-down {
+    bottom: 30px;
+}
+
+.scroll-arrow span {
+    display: block;
+    width: 20px;
+    height: 20px;
+    border-left: 3px solid rgba(150, 150, 150, 0.7);
+    border-bottom: 3px solid rgba(150, 150, 150, 0.7);
+}
+
+.arrow-up span {
+    transform: rotate(135deg);
+    animation: arrow-bounce-up 1.5s ease-in-out infinite;
+}
+
+.arrow-down span {
+    transform: rotate(-45deg);
+    animation: arrow-bounce-down 1.5s ease-in-out infinite;
+}
+
+@keyframes arrow-bounce-up {
+    0%, 100% { transform: rotate(135deg) translateX(0); }
+    50% { transform: rotate(135deg) translateX(5px); }
+}
+
+@keyframes arrow-bounce-down {
+    0%, 100% { transform: rotate(-45deg) translateX(0); }
+    50% { transform: rotate(-45deg) translateX(5px); }
+}
+
+/* Page-specific arrow colors */
+.page-0 .arrow-down span {
+    border-color: rgba(255, 215, 0, 0.7);
+}
+
+.page-1 .arrow-up span,
+.page-1 .arrow-down span {
+    border-color: rgba(100, 80, 60, 0.5);
+}
+
+.page-2 .arrow-up span {
+    border-color: rgba(255, 215, 0, 0.7);
 }
 
 /* Modal Styles */
@@ -835,22 +890,6 @@ html, body {
 
     .character-name {
         font-size: 0.8rem;
-    }
-
-    .scroll-paper.unrolled {
-        width: 250px;
-    }
-
-    .scroll-rod {
-        height: 220px;
-    }
-
-    .scroll-paper {
-        height: 360px;
-    }
-
-    .scroll-roll {
-        height: 200px;
     }
 
     .awards-wall {

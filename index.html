@@ -51,19 +51,18 @@
             <!-- Page 2: 롤링페이퍼 -->
             <section id="rolling-paper-section" class="page">
                 <div class="rolling-paper-background">
-                    <div class="scroll-container" id="rolling-paper-trigger">
-                        <!-- 두루마리 윗봉 -->
-                        <div class="scroll-rod top-rod"></div>
-                        <!-- 펼쳐지는 종이 -->
-                        <div class="scroll-paper" id="scroll-paper">
-                            <div class="scroll-paper-content">
-                                <h3>롤링페이퍼</h3>
-                                <p class="scroll-hint">탭하여 메시지 남기기</p>
-                            </div>
-                        </div>
-                        <!-- 두루마리 아랫봉 (감겨있는 부분) -->
-                        <div class="scroll-rod bottom-rod">
+                    <div class="scroll-wrapper">
+                        <!-- 두루마리 봉 (왼쪽) -->
+                        <div class="scroll-rod">
                             <div class="scroll-roll"></div>
+                        </div>
+                        <!-- 드래그 가능한 종이 영역 -->
+                        <div class="scroll-paper-wrapper" id="scroll-paper-wrapper">
+                            <div class="scroll-paper" id="scroll-paper">
+                                <div class="scroll-messages" id="scroll-messages">
+                                    <!-- Messages will be dynamically generated -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -80,11 +79,12 @@
             </section>
         </div>
 
-        <!-- Scroll Indicator -->
-        <div class="scroll-indicator" id="scroll-indicator">
-            <div class="scroll-dot active" data-page="0"></div>
-            <div class="scroll-dot" data-page="1"></div>
-            <div class="scroll-dot" data-page="2"></div>
+        <!-- Scroll Arrows -->
+        <div class="scroll-arrow arrow-up" id="arrow-up">
+            <span></span>
+        </div>
+        <div class="scroll-arrow arrow-down" id="arrow-down">
+            <span></span>
         </div>
     </div>
 
