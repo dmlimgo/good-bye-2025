@@ -24,9 +24,12 @@ const Awards = {
         const displayAwards = this.awards.slice(0, 9);
 
         displayAwards.forEach(award => {
+            const item = document.createElement('div');
+            item.className = 'award-item';
+            item.dataset.id = award.id;
+
             const frame = document.createElement('div');
             frame.className = 'award-frame';
-            frame.dataset.id = award.id;
 
             const img = document.createElement('img');
             // Fix image path: .png -> .jpeg
@@ -34,11 +37,17 @@ const Awards = {
             img.alt = award.title;
             img.loading = 'lazy';
 
+            const title = document.createElement('div');
+            title.className = 'award-label';
+            title.textContent = award.title;
+
             frame.appendChild(img);
-            wall.appendChild(frame);
+            item.appendChild(frame);
+            item.appendChild(title);
+            wall.appendChild(item);
 
             // Click to view detail directly
-            frame.addEventListener('click', () => this.showDetailModal(award));
+            item.addEventListener('click', () => this.showDetailModal(award));
         });
     },
 

@@ -47,24 +47,55 @@ const App = {
         const loadingBar = document.getElementById('loading-bar');
         const loadingText = document.getElementById('loading-text');
 
-        // Simulate loading with progress
-        const steps = [
-            { text: '에셋 불러오는 중...', progress: 20 },
-            { text: '캐릭터 준비 중...', progress: 40 },
-            { text: '무대 설정 중...', progress: 60 },
-            { text: '롤링페이퍼 준비 중...', progress: 80 },
-            { text: '거의 다 됐어요!', progress: 95 },
-            { text: '완료!', progress: 100 }
-        ];
+        const updateProgress = (text, progress) => {
+            if (loadingText) loadingText.textContent = text;
+            if (loadingBar) loadingBar.style.width = `${progress}%`;
+        };
 
-        for (const step of steps) {
-            if (loadingText) loadingText.textContent = step.text;
-            if (loadingBar) loadingBar.style.width = `${step.progress}%`;
-            await this.delay(300 + Math.random() * 200);
+        // Step 1: Load awards data and preload images
+        updateProgress('에셋 불러오는 중...', 10);
+        const awardsData = await Utils.loadJSON('data/awards.json');
+
+        // Step 2: Preload award images
+        updateProgress('어워드 이미지 로딩 중...', 20);
+        if (awardsData && awardsData.awards) {
+            await this.preloadImages(awardsData.awards.map(a => a.image.replace('.png', '.jpeg')));
         }
 
-        // Small delay before hiding loading screen
+        // Step 3: Preload background images
+        updateProgress('배경 이미지 로딩 중...', 40);
+        await this.preloadImages([
+            'assets/bg/bg.png',
+            'assets/bg/title.png',
+            'assets/bg/bar.png',
+            'assets/rolling/rolling-paper-title.png',
+            'assets/awards/award-title.png'
+        ]);
+
+        // Step 4: Continue loading
+        updateProgress('캐릭터 준비 중...', 60);
+        await this.delay(200);
+
+        updateProgress('무대 설정 중...', 75);
+        await this.delay(200);
+
+        updateProgress('롤링페이퍼 준비 중...', 90);
+        await this.delay(200);
+
+        updateProgress('완료!', 100);
         await this.delay(500);
+    },
+
+    preloadImages(urls) {
+        const promises = urls.map(url => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = resolve;
+                img.onerror = resolve; // Resolve even on error to not block loading
+                img.src = url;
+            });
+        });
+        return Promise.all(promises);
     },
 
     hideLoadingScreen() {
@@ -164,20 +195,18 @@ const App = {
 
     updatePageState(pageIndex) {
         // Manage animations based on current page
+        // Particles run on all pages
+        Background.start();
+
         switch (pageIndex) {
             case 0: // Stage page
                 Characters.resume();
-                Background.start();
                 break;
             case 1: // Rolling paper page
                 Characters.pause();
-                Background.stop();
-                Background.clear();
                 break;
             case 2: // Awards page
                 Characters.pause();
-                Background.stop();
-                Background.clear();
                 break;
         }
     },
@@ -198,9 +227,10 @@ document.addEventListener('visibilitychange', () => {
         Characters.pause();
         Background.stop();
     } else {
+        // Resume particles on all pages
+        Background.start();
         if (App.currentPage === 0) {
             Characters.resume();
-            Background.start();
         }
     }
 });

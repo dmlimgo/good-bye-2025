@@ -33,7 +33,7 @@ const Background = {
 
     resize() {
         if (!this.canvas) return;
-        this.canvas.width = window.innerWidth;
+        this.canvas.width = Math.min(window.innerWidth, 430);
         this.canvas.height = window.innerHeight;
     },
 
