@@ -409,9 +409,10 @@ body {
 
 /* 드래그 가능한 종이 영역 */
 .scroll-paper-wrapper {
-    width: calc(100vw);
+    width: calc(100vw - 50px);
+    max-width: 380px;
     height: 68vh;
-    overflow-x: auto;
+    overflow-x: scroll;
     overflow-y: hidden;
     margin-left: -5px;
     -webkit-overflow-scrolling: touch;
@@ -430,8 +431,8 @@ body {
 
 /* 펼쳐지는 종이 */
 .scroll-paper {
-    display: flex;
-    width: max-content;
+    display: block;
+    width: 100%;
     min-width: 100%;
     height: 100%;
     background: linear-gradient(180deg, #F5EDE0 0%, #EDE5D8 50%, #F5EDE0 100%);
@@ -462,8 +463,8 @@ body {
     flex-wrap: wrap;
     align-content: flex-start;
     gap: 40px 80px;
-    height: 100%;
-    width: max-content;
+    height: calc(68vh - 80px);
+    min-width: 100%;
     padding-right: 60px;
 }
 

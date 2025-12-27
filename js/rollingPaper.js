@@ -32,6 +32,7 @@ const RollingPaper = {
 
     renderMessages() {
         const container = document.getElementById('scroll-messages');
+        const paper = document.getElementById('scroll-paper');
         if (!container) return;
 
         container.innerHTML = '';
@@ -48,6 +49,36 @@ const RollingPaper = {
             const messageEl = this.createMessageElement(message, index);
             container.appendChild(messageEl);
         });
+
+        // 렌더링 후 너비 동적 계산
+        requestAnimationFrame(() => {
+            this.adjustPaperWidth();
+        });
+    },
+
+    adjustPaperWidth() {
+        const container = document.getElementById('scroll-messages');
+        const paper = document.getElementById('scroll-paper');
+        if (!container || !paper) return;
+
+        // 메시지들의 실제 배치 후 필요한 너비 계산
+        const messages = container.querySelectorAll('.scroll-message');
+        if (messages.length === 0) return;
+
+        let maxRight = 0;
+        messages.forEach(msg => {
+            const rect = msg.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const right = rect.right - containerRect.left;
+            if (right > maxRight) maxRight = right;
+        });
+
+        // 여유 공간 추가 (회전된 메시지 고려 + 패딩)
+        const extraSpace = 1000;
+        const totalWidth = maxRight + extraSpace;
+
+        paper.style.width = totalWidth + 'px';
+        container.style.width = (totalWidth - 120) + 'px';
     },
 
     createMessageElement(message, index) {
