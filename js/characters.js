@@ -27,24 +27,84 @@ const Characters = {
         if (membersData) this.members = membersData.members;
         if (awardsData) this.awards = awardsData.awards;
 
-        // Calculate bounds (stage area)
+        // Wait for layout to complete before calculating bounds
+        await this.waitForLayout();
+
+        // Calculate bounds (audience area)
         this.updateBounds();
-        window.addEventListener('resize', () => this.updateBounds());
+        window.addEventListener('resize', () => {
+            this.updateBounds();
+            this.repositionCharacters();
+        });
 
         // Create characters
         this.createCharacters();
     },
 
+    async waitForLayout() {
+        // Wait until container has valid dimensions (with timeout)
+        return new Promise(resolve => {
+            let attempts = 0;
+            const maxAttempts = 30; // ~500ms max wait
+
+            const check = () => {
+                const rect = this.container.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                    resolve();
+                } else if (attempts >= maxAttempts) {
+                    // Timeout - use fallback bounds
+                    resolve();
+                } else {
+                    attempts++;
+                    requestAnimationFrame(check);
+                }
+            };
+            requestAnimationFrame(check);
+        });
+    },
+
+    repositionCharacters() {
+        // Update character positions on resize
+        if (!this.characters.length) return;
+
+        this.characters.forEach((character, index) => {
+            const x = Utils.clamp(character.x, this.bounds.left, this.bounds.right);
+            const y = Utils.clamp(character.y, this.bounds.top, this.bounds.bottom);
+            character.x = x;
+            character.y = y;
+            character.targetX = x;
+            character.targetY = y;
+            this.updateCharacterPosition(character);
+        });
+    },
+
     updateBounds() {
-        const viewport = Utils.getViewport();
-        const topMargin = 150; // Space for title
-        const bottomMargin = viewport.height * 0.15; // Stage floor area (reduced)
+        // Get characters container bounds
+        if (this.container) {
+            const rect = this.container.getBoundingClientRect();
+            // Check if container has valid dimensions
+            if (rect.width > 0 && rect.height > 0) {
+                this.bounds = {
+                    left: 10,
+                    right: rect.width - 60,
+                    top: 10,
+                    bottom: rect.height - 70
+                };
+                return;
+            }
+        }
+
+        // Fallback: calculate based on viewport and layout percentages
+        const containerWidth = Math.min(window.innerWidth, 430);
+        const containerHeight = window.innerHeight;
+        // audience-area is flex:1, estimate its height
+        const audienceHeight = containerHeight * 0.5; // approximate
 
         this.bounds = {
-            left: 20,
-            right: viewport.width - 70,
-            top: topMargin,
-            bottom: viewport.height - bottomMargin - 60
+            left: 10,
+            right: containerWidth - 60,
+            top: 10,
+            bottom: audienceHeight - 70
         };
     },
 
@@ -100,9 +160,10 @@ const Characters = {
         el.appendChild(avatarEl);
         el._avatarEl = avatarEl;  // Store reference for direction flip
 
-        // Calculate initial position (spread across stage)
-        const cols = 7;
-        const rows = Math.ceil(this.members.length / cols);
+        // Calculate initial position (spread across audience area)
+        const totalMembers = this.members.length;
+        const cols = Math.min(8, Math.ceil(Math.sqrt(totalMembers * 1.5)));
+        const rows = Math.ceil(totalMembers / cols);
         const col = index % cols;
         const row = Math.floor(index / cols);
 
@@ -112,8 +173,15 @@ const Characters = {
         const cellWidth = areaWidth / cols;
         const cellHeight = areaHeight / rows;
 
-        const x = this.bounds.left + col * cellWidth + Utils.random(10, cellWidth - 60);
-        const y = this.bounds.top + row * cellHeight + Utils.random(10, cellHeight - 70);
+        // Center each character in its cell with small random offset
+        const centerX = this.bounds.left + col * cellWidth + cellWidth / 2;
+        const centerY = this.bounds.top + row * cellHeight + cellHeight / 2;
+
+        const offsetX = Utils.random(-cellWidth * 0.3, cellWidth * 0.3);
+        const offsetY = Utils.random(-cellHeight * 0.3, cellHeight * 0.3);
+
+        const x = Utils.clamp(centerX + offsetX, this.bounds.left, this.bounds.right);
+        const y = Utils.clamp(centerY + offsetY, this.bounds.top, this.bounds.bottom);
 
         // Character state
         const character = {

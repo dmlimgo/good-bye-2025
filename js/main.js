@@ -10,6 +10,16 @@ const App = {
         // Start loading sequence
         await this.loadAssets();
 
+        // Show main container first (behind loading screen) for layout calculation
+        const mainContainer = document.getElementById('main-container');
+        if (mainContainer) {
+            mainContainer.classList.remove('hidden');
+            mainContainer.style.visibility = 'hidden';
+        }
+
+        // Wait a frame for layout
+        await this.delay(50);
+
         // Initialize all modules
         Background.init();
         await Characters.init();
@@ -19,8 +29,15 @@ const App = {
         // Setup scroll handling
         this.setupScrollHandling();
 
-        // Hide loading screen and show main content
+        // Show main content and hide loading screen
+        if (mainContainer) {
+            mainContainer.style.visibility = 'visible';
+        }
         this.hideLoadingScreen();
+
+        // Recalculate bounds after visible
+        Characters.updateBounds();
+        Characters.repositionCharacters();
 
         // Start animations
         Background.start();

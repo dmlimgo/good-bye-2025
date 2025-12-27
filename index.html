@@ -14,8 +14,8 @@
     <div id="loading-screen">
         <div class="loading-content">
             <img src="assets/logo/logo.jpg" alt="GentleCrew Logo" class="loading-logo">
-            <h1 class="loading-title">Good Bye 2025</h1>
-            <p class="loading-subtitle">GentleCrew 연말파티</p>
+            <h1 class="loading-title">GENGURI<br>SUPER CONCERT</h1>
+            <p class="loading-subtitle">GentleCrew 2025 연말파티</p>
             <div class="loading-bar-container">
                 <div class="loading-bar" id="loading-bar"></div>
             </div>
@@ -32,19 +32,26 @@
         <div id="scroll-container">
             <!-- Page 1: 소공연장 -->
             <section id="stage-section" class="page">
-                <div class="stage-background">
-                    <div class="stage-curtain left"></div>
-                    <div class="stage-curtain right"></div>
-                    <div class="stage-floor"></div>
+                <!-- 상단: 무대 영역 -->
+                <div class="stage-area">
+                    <img src="assets/bg/bg.png" alt="Stage" class="stage-image">
+                    <img src="assets/bg/title.png" alt="Title" class="stage-title">
                     <div class="spotlight-container">
                         <div class="spotlight" id="spotlight1"></div>
                         <div class="spotlight" id="spotlight2"></div>
                     </div>
                 </div>
-                <div id="characters-container"></div>
-                <div class="page-title">
-                    <img src="assets/logo/logo.jpg" alt="Logo" class="title-logo">
-                    <h2>2025 연말파티</h2>
+
+                <!-- 중간 60%: 아바타 이동 영역 -->
+                <div class="audience-area" id="audience-area">
+                    <div id="characters-container"></div>
+                </div>
+
+                <!-- 하단: 차단봉 영역 -->
+                <div class="barrier-area">
+                    <img src="assets/bg/bar.png" alt="Barrier" class="barrier-image left">
+                    <div class="barrier-gap"></div>
+                    <img src="assets/bg/bar.png" alt="Barrier" class="barrier-image right">
                 </div>
             </section>
 
@@ -71,7 +78,7 @@
             <!-- Page 3: Awards 액자 -->
             <section id="awards-section" class="page">
                 <div class="awards-background">
-                    <h2 class="awards-title">2025 Awards</h2>
+                    <h2 class="awards-title">2025 어워드</h2>
                     <div class="awards-wall" id="awards-wall">
                         <!-- Awards frames will be dynamically generated -->
                     </div>

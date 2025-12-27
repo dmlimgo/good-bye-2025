@@ -10,10 +10,16 @@ html, body {
     height: 100%;
     overflow: hidden;
     font-family: 'Noto Sans KR', sans-serif;
-    background: #1a1a2e;
+    background: #0a0a15;
     color: #fff;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
+}
+
+/* 모바일 뷰 컨테이너 */
+body {
+    display: flex;
+    justify-content: center;
 }
 
 .hidden {
@@ -24,8 +30,10 @@ html, body {
 #loading-screen {
     position: fixed;
     top: 0;
-    left: 0;
+    left: 50%;
+    transform: translateX(-50%);
     width: 100%;
+    max-width: 430px;
     height: 100%;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     display: flex;
@@ -92,13 +100,15 @@ html, body {
 /* Main Container */
 #main-container {
     width: 100%;
+    max-width: 430px;
     height: 100%;
     position: relative;
     overflow: hidden;
+    background: #1a1a2e;
 }
 
 #animation-canvas {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
@@ -134,27 +144,38 @@ html, body {
 /* Stage Section (Page 1) */
 #stage-section {
     background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    display: flex;
+    flex-direction: column;
 }
 
-.stage-background {
-    position: absolute;
+/* 상단: 무대 영역 (이미지 크기에 맞춤) */
+.stage-area {
+    position: relative;
     width: 100%;
-    height: 100%;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    overflow: hidden;
+    z-index: 5;
+    background: #0a0a15;
 }
 
-.stage-curtain {
-    display: none;
-}
-
-.stage-floor {
-    position: absolute;
-    bottom: 0;
-    left: 0;
+.stage-image {
     width: 100%;
-    height: 15%;
-    background: linear-gradient(180deg, #2d1810 0%, #1a0f0a 100%);
-    transform: perspective(500px) rotateX(20deg);
-    transform-origin: bottom;
+    height: auto;
+    display: block;
+}
+
+.stage-title {
+    position: absolute;
+    top: 18%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40%;
+    height: auto;
+    z-index: 2;
+    pointer-events: none;
 }
 
 .spotlight-container {
@@ -171,7 +192,7 @@ html, body {
     position: absolute;
     top: -50px;
     width: 150px;
-    height: 400px;
+    height: 100%;
     background: linear-gradient(180deg,
         rgba(255, 255, 200, 0.4) 0%,
         rgba(255, 255, 200, 0.1) 50%,
@@ -195,36 +216,59 @@ html, body {
     50% { transform: rotate(15deg); }
 }
 
+/* 중간: 관객(아바타) 영역 (남은 공간 채움) */
+.audience-area {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    background: linear-gradient(180deg, #16213e 0%, #1a1a2e 50%, #1a1a2e 100%);
+    overflow: visible;
+    z-index: 10;
+}
+
+/* 무대와 관객 영역 자연스러운 연결 */
+.stage-area::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: linear-gradient(180deg, transparent 0%, #16213e 100%);
+    pointer-events: none;
+    z-index: 4;
+}
+
 #characters-container {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 10;
-}
-
-.page-title {
-    position: absolute;
-    top: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    text-align: center;
     z-index: 20;
 }
 
-.title-logo {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    margin-bottom: 10px;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+/* 하단: 차단봉 영역 (이미지 크기에 맞춤) */
+.barrier-area {
+    position: relative;
+    width: 100%;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
 }
 
-.page-title h2 {
-    font-size: 1.2rem;
-    color: #ffd700;
-    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+.barrier-image {
+    width: calc(50% - 15px);
+    height: auto;
+    display: block;
+}
+
+.barrier-gap {
+    width: 30px;
+    flex-shrink: 0;
 }
 
 /* Character Styles */
@@ -236,7 +280,7 @@ html, body {
     flex-direction: column;
     align-items: center;
     cursor: pointer;
-    z-index: 15;
+    z-index: 25;
     will-change: transform;
     transition: transform 0.2s ease-in-out;
 }
@@ -492,10 +536,9 @@ html, body {
     object-fit: cover;
 }
 
-/* Scroll Indicator */
 /* Scroll Arrows */
 .scroll-arrow {
-    position: fixed;
+    position: absolute;
     left: 50%;
     transform: translateX(-50%);
     z-index: 200;
